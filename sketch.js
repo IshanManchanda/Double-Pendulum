@@ -1,22 +1,25 @@
 const height = 600;
 const width = 1200;
 const GM = 0.1;
+const g = 0.001;
 let screen = 1;
 let p1, p2;
 
-function Pendulum(origin, armLength, mass, angle) {
-	this.origin = origin;
-	this.length = armLength;
-	this.theta = radians(angle);
-	this.pos = createVector(0, 0);
-	this.normal = createVector(0, 0);
-	this.mass = mass;
-	this.omega = 0.0;
-	this.alpha = 0.0;
-	this.radius = this.mass / 10;
-	this.dcol = true;
+class Pendulum{
+	constructor(origin, armLength, mass, angle) {
+		this.origin = origin;
+		this.length = armLength;
+		this.theta = radians(angle);
+		this.pos = createVector(0, 0);
+		this.normal = createVector(0, 0);
+		this.mass = mass;
+		this.omega = 0.0;
+		this.alpha = 0.0;
+		this.radius = this.mass / 10;
+		this.dcol = true;
+	}
 
-	this.update = function() {
+	update() {
 		this.omega += this.alpha;
 		this.theta += this.omega;
 
@@ -25,7 +28,7 @@ function Pendulum(origin, armLength, mass, angle) {
 		this.pos.y = this.origin.y + this.length * cos(this.theta);
 	};
 
-	this.draw = function() {
+	draw() {
 		stroke(255, 0, 0);
 		strokeWeight(2);
 		line(this.origin.x, this.origin.y, this.pos.x, this.pos.y);
@@ -38,11 +41,15 @@ function Pendulum(origin, armLength, mass, angle) {
 		ellipse(this.pos.x, this.pos.y, this.radius, this.radius);
 	};
 
-	this.setOrigin = function(o) {
+	setOrigin(o) {
 		this.origin = o;
 	};
 
-	this.drawOrigin = function() {
+	setAlpha(alpha) {
+		this.alpha = alpha;
+	}
+
+	drawOrigin() {
 		fill(255, 0, 0);
 		rect(this.origin.x, this.origin.y, 8, 8);
 	};
@@ -73,11 +80,18 @@ function calcAcc() {
 	const dt1sq = p1.omega;
 	const dt2sq = p2.omega;
 
-	const g = GM / ((height - p1.pos.y) * (height - p1.pos.y));
+	// const g = GM / ((height - p1.pos.y) * (height - p1.pos.y));
 
 	// Impossible To Understand Equation - Adapted From Wolfram
-	p1.alpha = ((g * ((st2 * ct12) - (mu * st1))) - (st12 * ((l2 * dt2sq) + (l1 * dt1sq * ct12)))) / (l1 * (mu - sq(ct12)));
-	p2.alpha = (g * mu * (st1 * ct12 - st2) + (mu * l1 * dt1sq + l2 * dt2sq * ct12) * st12) / (l2 * (mu - sq(ct12)));
+	p1.setAlpha(
+		((g * ((st2 * ct12) - (mu * st1)))
+			- (st12 * ((l2 * dt2sq) + (l1 * dt1sq * ct12))))
+		/ (l1 * (mu - sq(ct12)))
+	);
+	p2.setAlpha(
+		(g * mu * (st1 * ct12 - st2)
+			+ (mu * l1 * dt1sq + l2 * dt2sq * ct12) * st12)
+		/ (l2 * (mu - sq(ct12))));
 }
 
 
@@ -88,7 +102,7 @@ function energy() {
 	// Calculating Kinetic Energy ((1/2)mv^2)
 	const kinEnergy = ((p1.mass * sq(p1.length * p1.omega)) + (p2.mass * sq(p2.length * p2.omega)));
 	// Calculating Mechanical Energy (PE + KE)
-	mechEnergy = potEnergy + kinEnergy;
+	let mechEnergy = potEnergy + kinEnergy;
 
 	// Displaying Values
 	fill(100, 160, 255);
@@ -231,8 +245,8 @@ function setup() {
 function draw() {
 	background(0);
 	screen2();
-	textFont("old english text mt", 30);
-	fill(0, 255, 80);
-	strokeWeight(0);
-	text("Rippr Inc.", 1060, 590);
+	// textFont("old english text mt", 30);
+	// fill(0, 255, 80);
+	// strokeWeight(0);
+	// text("Rippr Inc.", 1060, 590);
 }
