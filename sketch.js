@@ -1,21 +1,24 @@
 const height = 600;
 const width = 1200;
-const GM = 0.1;
 const g = 0.1;
-let screen = 1;
+let screen = 2;
 let p1, p2;
 
 class Pendulum{
-	constructor(origin, armLength, mass, angle) {
+	constructor(origin, length, mass, start_angle) {
 		this.origin = origin;
-		this.length = armLength;
-		this.theta = radians(angle);
-		this.pos = createVector(0, 0);
-		this.normal = createVector(0, 0);
+		this.length = length;
 		this.mass = mass;
+		this.theta = radians(start_angle);
+
+		this.pos = createVector(0, 0);
 		this.omega = 0.0;
 		this.alpha = 0.0;
-		this.radius = this.mass / 10;
+
+		this.sin_theta = 0.0;
+		this.cos_theta = 0.0;
+
+		this.radius = 20 + this.mass / 12;
 		this.dcol = true;
 	}
 
@@ -23,9 +26,13 @@ class Pendulum{
 		this.omega += this.alpha;
 		this.theta += this.omega;
 
+		// Store sin and cos values to be used in various places later
+		this.sin_theta = sin(this.theta);
+		this.cos_theta = cos(this.theta);
+
 		// Converting From Polar To Cartesian Coordinates
-		this.pos.x = this.origin.x + this.length * sin(this.theta);
-		this.pos.y = this.origin.y + this.length * cos(this.theta);
+		this.pos.x = this.origin.x + this.length * this.sin_theta;
+		this.pos.y = this.origin.y + this.length * this.cos_theta;
 	};
 
 	draw() {
@@ -69,6 +76,7 @@ function startSim(m1, m2, a1, a2, l1, l2) {
 	screen = 2;
 }
 
+
 function calcAcc() {
 	// Variables to prettify equations (as much as can)
 	const mu = 1 + p1.mass / p2.mass;
@@ -77,27 +85,25 @@ function calcAcc() {
 	const omega1_sq = sq(p1.omega);
 	const omega2_sq = sq(p2.omega);
 
-	const sin_theta1 = sin(p1.theta);
-	const sin_theta2 = sin(p2.theta);
+	const sin_theta1 = p1.sin_theta;
+	const sin_theta2 = p2.sin_theta;
 	const sin_theta1_2 = sin(p1.theta - p2.theta);
 	const cos_theta1_2 = cos(p1.theta - p2.theta);
 
-	// const g = GM / ((height - p1.pos.y) * (height - p1.pos.y));
+	const mu_reduced_reciprocal = 1 / (mu - sq(cos_theta1_2))
 
-	// Equation for alpha, adapted from scienceworld.wolfram.com
+	// Equations for alphas, adapted from scienceworld.wolfram.com
 	p1.setAlpha(
-		(
+		mu_reduced_reciprocal / l1 * (
 			(g * ((sin_theta2 * cos_theta1_2) - (mu * sin_theta1)))
 			- (sin_theta1_2 * ((l2 * omega2_sq) + (l1 * omega1_sq * cos_theta1_2)))
 		)
-		/ (l1 * (mu - sq(cos_theta1_2)))
 	);
 	p2.setAlpha(
-		(
+		mu_reduced_reciprocal / l2 * (
 			g * mu * (sin_theta1 * cos_theta1_2 - sin_theta2)
 			+ (mu * l1 * omega1_sq + l2 * omega2_sq * cos_theta1_2) * sin_theta1_2
 		)
-		/ (l2 * (mu - sq(cos_theta1_2)))
 	);
 }
 
@@ -106,8 +112,8 @@ function energy() {
 	// Variables to prettify equations (as much as can)
 	const m1 = p1.mass;
 	const m2 = p2.mass;
-	const h1 = height - p1.pos.y;
-	const h2 = height - p2.pos.y;
+	const h1 = p1.length * (1 - p1.cos_theta);
+	const h2 = p2.length * (1 - p2.cos_theta);
 	const v1 = p1.length * p1.omega;
 	const v2 = p2.length * p2.omega;
 
@@ -115,18 +121,19 @@ function energy() {
 
 	// Calculating Potential Energy (mgh)
 	const V1 = m1 * g * h1;
-	const V2 = m2 * g * h2;
+	const V2 = m2 * g * (h1 + h2);
 	const V = V1 + V2;
 
 	// Calculating Kinetic Energy (1/2 mv^2)
-	const T1 = m1 * sq(v1) / 2;
 	// Vector sum of velocities for T2
+	const T1 = m1 * sq(v1) / 2;
 	const T2 = m2 * (sq(v1) + sq(v2) + 2 * v1 * v2 * cos_theta1_2) / 2;
 	const T =  T1 + T2;
 
 	// Calculating Mechanical Energy (PE + KE)
 	let M = V + T;
 
+	// TODO: Switch to bar showing PE and KE %s as stacked columns
 	// Displaying Values
 	fill(100, 160, 255);
 	textFont('Georgia',20);
@@ -136,118 +143,15 @@ function energy() {
 	text("Mechanical Energy: " + round(M), 9, 590);
 }
 
-function screen1() {
-	stroke(9, 240, 17);
-	strokeWeight(5);
-	line(40,50,width-40,50);
-	line(40,100,width-40,100);
-	line(40,150,width-40,150);
-	line(40,200,width-40,200);
-	line(40,250,width-40,250);
-	line(40,300,width-40,300);
-
-	noStroke();
-	textFont(createFont("Ravie"),16);
-	fill(250, 161, 45);
-	rect(ang1+40,50,8,14);
-	rect(ang2+40,100,8,14);
-	rect(ma1-60,150,8,14);
-	rect(ma2-60,200,8,14);
-	rect(len1+40,250,8,14);
-	rect(len2+40,300,8,14);
-
-	fill(255, 0, 0);
-	text("0°",35,76);
-	text("360°",width-50,76);
-	text("0°",35,126);
-	text("360°",width-50,126);
-	text("100Px",17,176);
-	text("1000Px",width-70,176);
-	text("100Px",17,226);
-	text("1000Px",width-70,226);
-	text("50Px",17,276);
-	text("200Px",width-70,276);
-	text("50Px",17,326);
-	text("200Px",width-70,326);
-
-	//Drawing 'Start Simulation" Button
-	fill(0, 255, 204);
-	rect(300,500,200,40,90);
-	fill(234, 0, 255);
-	textSize(16);
-	text("Start Simulation",205,505);
-
-	//Logic For Slider Movement And Button Press
-	{
-		if (mouseX > ang1 + 32 && mouseX < ang1 + 48 && mouseY < 57 && mouseY > 43){
-			cursor(HAND);
-			if (mouseIsPressed) {
-				ang1 = mouseX - 40;
-				ang1 = constrain(ang1,0,520);
-			}
-		}
-
-		else if (mouseX > ang2 + 32 && mouseX < ang2 + 48 && mouseY < 107 && mouseY > 93){
-			cursor(HAND);
-			if (mouseIsPressed) {
-				ang2 = mouseX - 40;
-				ang2 = constrain(ang2,0,520);
-			}
-		}
-
-		else if (mouseX > ma1 - 68 && mouseX < ma1 - 52 && mouseY < 157 && mouseY > 143){
-			cursor(HAND);
-			if (mouseIsPressed) {
-				ma1 = mouseX + 60;
-				ma1 = constrain(ma1,100,620);
-			}
-		}
-
-		else if (mouseX > ma2 - 68 && mouseX < ma2 - 52 && mouseY < 207 && mouseY > 193){
-			cursor(HAND);
-			if (mouseIsPressed) {
-				ma2 = mouseX + 60;
-				ma2 = constrain(ma2,100,620);
-			}
-		}
-
-		else if (mouseX > len1 + 32 && mouseX < len1 + 48 && mouseY < 257 && mouseY > 243){
-			cursor(HAND);
-			if (mouseIsPressed) {
-				len1 = mouseX - 40;
-				len1 = constrain(len1,0,520);
-			}
-		}
-
-		else if (mouseX > len2 + 32 && mouseX < len2 + 48 && mouseY < 307 && mouseY > 293){
-			cursor(HAND);
-			if (mouseIsPressed) {
-				len2 = mouseX - 40;
-				len2 = constrain(len2,0,520);
-			}
-		}
-
-		else if (mouseX > 205 && mouseX < 395 && mouseY > 480 && mouseY < 520) {
-			cursor(HAND);
-			mouseReleased = function() {
-				if ((mouseX > 205 && mouseX < 395 && mouseY > 480 && mouseY < 520) && Screen === 1) {
-					startSim(ma1,ma2,ang1,ang2,len1,len2);
-				}
-			};
-		}
-
-		else {
-			cursor();
-		}
-	}
-}
-
 
 function screen2() {
+	// Calculations
 	calcAcc();
 	p1.update();
 	p2.setOrigin(p1.pos);
 	p2.update();
+
+	// Drawing
 	p2.draw();
 	p1.draw();
 	p1.drawOrigin();
@@ -267,9 +171,7 @@ function setup() {
 
 function draw() {
 	background(0);
-	screen2();
-	// textFont("old english text mt", 30);
-	// fill(0, 255, 80);
-	// strokeWeight(0);
-	// text("Rippr Inc.", 1060, 590);
+	if (screen === 2) {
+		screen2();
+	}
 }
