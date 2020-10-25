@@ -1,7 +1,7 @@
 const height = 600;
 const width = 1200;
 const GM = 0.1;
-const g = 0.001;
+const g = 0.1;
 let screen = 1;
 let p1, p2;
 
@@ -70,47 +70,70 @@ function startSim(m1, m2, a1, a2, l1, l2) {
 }
 
 function calcAcc() {
+	// Variables to prettify equations (as much as can)
 	const mu = 1 + p1.mass / p2.mass;
 	const l1 = p1.length;
 	const l2 = p2.length;
-	const ct12 = cos(p1.theta - p2.theta);
-	const st1 = sin(p1.theta);
-	const st2 = sin(p2.theta);
-	const st12 = sin(p1.theta - p2.theta);
-	const dt1sq = p1.omega;
-	const dt2sq = p2.omega;
+	const omega1_sq = sq(p1.omega);
+	const omega2_sq = sq(p2.omega);
+
+	const sin_theta1 = sin(p1.theta);
+	const sin_theta2 = sin(p2.theta);
+	const sin_theta1_2 = sin(p1.theta - p2.theta);
+	const cos_theta1_2 = cos(p1.theta - p2.theta);
 
 	// const g = GM / ((height - p1.pos.y) * (height - p1.pos.y));
 
-	// Impossible To Understand Equation - Adapted From Wolfram
+	// Equation for alpha, adapted from scienceworld.wolfram.com
 	p1.setAlpha(
-		((g * ((st2 * ct12) - (mu * st1)))
-			- (st12 * ((l2 * dt2sq) + (l1 * dt1sq * ct12))))
-		/ (l1 * (mu - sq(ct12)))
+		(
+			(g * ((sin_theta2 * cos_theta1_2) - (mu * sin_theta1)))
+			- (sin_theta1_2 * ((l2 * omega2_sq) + (l1 * omega1_sq * cos_theta1_2)))
+		)
+		/ (l1 * (mu - sq(cos_theta1_2)))
 	);
 	p2.setAlpha(
-		(g * mu * (st1 * ct12 - st2)
-			+ (mu * l1 * dt1sq + l2 * dt2sq * ct12) * st12)
-		/ (l2 * (mu - sq(ct12))));
+		(
+			g * mu * (sin_theta1 * cos_theta1_2 - sin_theta2)
+			+ (mu * l1 * omega1_sq + l2 * omega2_sq * cos_theta1_2) * sin_theta1_2
+		)
+		/ (l2 * (mu - sq(cos_theta1_2)))
+	);
 }
 
 
 function energy() {
-	// Calculating Potential Energy (mgh)
-	const potEnergy = g * ((p1.mass * (height - p1.pos.y)) + (p2.mass * (height - p2.pos.y)));
+	// Variables to prettify equations (as much as can)
+	const m1 = p1.mass;
+	const m2 = p2.mass;
+	const h1 = height - p1.pos.y;
+	const h2 = height - p2.pos.y;
+	const v1 = p1.length * p1.omega;
+	const v2 = p2.length * p2.omega;
 
-	// Calculating Kinetic Energy ((1/2)mv^2)
-	const kinEnergy = ((p1.mass * sq(p1.length * p1.omega)) + (p2.mass * sq(p2.length * p2.omega)));
+	const cos_theta1_2 = cos(p1.theta - p2.theta);
+
+	// Calculating Potential Energy (mgh)
+	const V1 = m1 * g * h1;
+	const V2 = m2 * g * h2;
+	const V = V1 + V2;
+
+	// Calculating Kinetic Energy (1/2 mv^2)
+	const T1 = m1 * sq(v1) / 2;
+	// Vector sum of velocities for T2
+	const T2 = m2 * (sq(v1) + sq(v2) + 2 * v1 * v2 * cos_theta1_2) / 2;
+	const T =  T1 + T2;
+
 	// Calculating Mechanical Energy (PE + KE)
-	let mechEnergy = potEnergy + kinEnergy;
+	let M = V + T;
 
 	// Displaying Values
 	fill(100, 160, 255);
 	textFont('Georgia',20);
 	strokeWeight(0);
-	text("Kinetic Energy: " + round(kinEnergy), 9, 540);
-	text("Potential Energy: " + round(potEnergy), 9, 565);
-	text("Mechanical Energy: " + round(mechEnergy), 9, 590);
+	text("Kinetic Energy: " + round(T), 9, 540);
+	text("Potential Energy: " + round(V), 9, 565);
+	text("Mechanical Energy: " + round(M), 9, 590);
 }
 
 function screen1() {
